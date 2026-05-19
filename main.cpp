@@ -2,8 +2,11 @@
 #include <iomanip>
 #include <string>
 #include <algorithm>
+#include <limits>
 #include <conio.h>
 #include <windows.h>
+#include <cctype>
+#include <cmath>
 using namespace std;
 
 #define MAX_USER 100
@@ -12,7 +15,7 @@ using namespace std;
 
 struct Billing {
     double jam;
-    int masaAktif;
+    double masaAktif;
 };
 
 struct PesanMenu {
@@ -31,7 +34,7 @@ struct User {
 struct Paket {
     string namaPaket;
     double jam;
-    int masaAktif;
+    double masaAktif;
     double harga;
 };
 
@@ -39,7 +42,7 @@ struct PesananBilling {
     string namaUser;
     string namaPaket;
     double jam;
-    int masaAktif;
+    double masaAktif;
     double harga;
     string status;
 };
@@ -62,9 +65,6 @@ int jumlahPesananMenu = 0;
 int jumlahUser = 0;
 int jumlahPaket = 0;
 
-#include <windows.h>
-#include <conio.h>
-
 void clearScreen() {
     system("cls");
 }
@@ -74,9 +74,36 @@ void pauseScreen() {
     _getch();
 }
 
+double inputAngka(string prompt) {
+    string input;
+    double nilai;
+
+    while (true) {
+        cout << prompt;
+        cin >> input;
+
+        replace(input.begin(), input.end(), ',', '.');
+
+        try {
+            nilai = stod(input);
+            return nilai;
+        }
+        catch (...) {
+            cout << "Input harus angka!\n";
+        }
+    }
+}
+
+void tampilAngka(double nilai) {
+    if (floor(nilai) == nilai)
+        cout << (int)nilai;
+    else
+        cout << nilai;
+}
+
 int menuArrow(string title, string options[], int size) {
     int pilih = 0;
-    char key;
+    int key;
 
     while (true) {
         clearScreen();
@@ -91,16 +118,16 @@ int menuArrow(string title, string options[], int size) {
 
         key = _getch();
 
-        if (key == -32) {
+        if (key == 224) {
             key = _getch();
 
-            if (key == 72 && pilih > 0) {
+            if (key == 72 && pilih > 0)
                 pilih--;
-            }
-            else if (key == 80 && pilih < size - 1) { // bawah
+
+            else if (key == 80 && pilih < size - 1)
                 pilih++;
-            }
         }
+
         else if (key == 13) {
             return pilih + 1;
         }
@@ -115,23 +142,28 @@ bool cekNama(string namaBaru) {
     return false;
 }
 
+bool cekNamaKecuali(string namaBaru, string namaLama) {
+    if (namaBaru == namaLama) return false;
+    return cekNama(namaBaru);
+}
+
 string inputPassword() {
     string password = "";
-    char ch;
+    int ch;
 
     while (true) {
         ch = _getch();
 
-        if (ch == 13) {
-            break;
-        }
+        if (ch == 13) break;
+
         else if (ch == 8) {
             if (!password.empty()) {
                 password.pop_back();
                 cout << "\b \b";
             }
         }
-        else {
+
+        else if (isprint(ch)) {
             password += ch;
             cout << "*";
         }
@@ -141,23 +173,51 @@ string inputPassword() {
     return password;
 }
 
+string validasiPassword() {
+    string pass;
+
+    do {
+        cout << "Password (minimal 8 karakter): ";
+        pass = inputPassword();
+
+        if (pass.length() < 8) {
+            cout << "Password terlalu pendek!\n";
+        }
+
+    } while (pass.length() < 8);
+
+    return pass;
+}
+
+bool validasiNamaKosong(string nama) {
+    if (nama.empty()) {
+        cout << "Nama tidak boleh kosong!\n";
+        return false;
+    }
+
+    return true;
+}
+
 void registerUser() {
     if (jumlahUser >= MAX_USER) {
         cout << "Kapasitas user penuh!\n";
         return;
     }
 
-    cin.ignore();
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
     cout << "Nama: ";
-    getline(cin, daftarUser[jumlahUser].nama);
+getline(cin, daftarUser[jumlahUser].nama);
+if (!validasiNamaKosong(daftarUser[jumlahUser].nama)) {
+    return;
+}
 
-    if (cekNama(daftarUser[jumlahUser].nama)) {
-        cout << "Nama sudah digunakan!\n";
-        return;
-    }
+if (cekNama(daftarUser[jumlahUser].nama)) {
+    cout << "Nama sudah digunakan!\n";
+    return;
+}
 
-    cout << "Password: ";
-    daftarUser[jumlahUser].password = inputPassword();
+daftarUser[jumlahUser].password = validasiPassword();
+
 
     daftarUser[jumlahUser].billing.jam = 0;
     daftarUser[jumlahUser].billing.masaAktif = 0;
@@ -170,14 +230,14 @@ void registerUser() {
 bool login(bool &admin, int &userIndex) {
     string namaInput, passwordInput;
 
-    cin.ignore();
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
     cout << "Nama: ";
     getline(cin, namaInput);
 
     cout << "Password: ";
     passwordInput = inputPassword();
 
-    if (namaInput == "Admin" && passwordInput == "076") {
+    if (namaInput == "Admin" && passwordInput == "Admin076") {
         admin = true;
         return true;
     }
@@ -190,8 +250,7 @@ bool login(bool &admin, int &userIndex) {
             return true;
         }
     }
-
-    cout << "Login gagal!\n";
+    
     return false;
 }
 
@@ -210,52 +269,70 @@ void tampilkanMember() {
     cout << "---------------------------------------------------------\n";
 
     for (int i = 0; i < jumlahUser; i++) {
-        cout << setw(5)  << i + 1
-            << setw(20) << daftarUser[i].nama
-            << setw(15) << daftarUser[i].password
-            << setw(10) << daftarUser[i].billing.jam
-            << setw(15) << daftarUser[i].billing.masaAktif
-            << endl;
-    }
-    cout << endl;
-}
 
+    cout << setw(5)  << i + 1
+         << setw(20) << daftarUser[i].nama
+         << setw(15) << daftarUser[i].password;
+
+    tampilAngka(daftarUser[i].billing.jam);
+    cout << " jam\t\t";
+
+    tampilAngka(daftarUser[i].billing.masaAktif);
+    cout << " hari" << endl;
+}
+}
 void tambahMember() {
     if (jumlahUser >= MAX_USER) {
         cout << "Kapasitas penuh\n";
         return;
     }
 
-    cin.ignore();
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
     cout << "Nama: ";
     getline(cin, daftarUser[jumlahUser].nama);
+    if (!validasiNamaKosong(daftarUser[jumlahUser].nama)) {
+    return;
+}
+    if (cekNama(daftarUser[jumlahUser].nama)) {
+        cout << "Nama sudah digunakan!\n";
+        return;
+    }
 
-    cout << "Password: ";
-    cin >> daftarUser[jumlahUser].password;
+    daftarUser[jumlahUser].password = validasiPassword();
 
-    cout << "Billing Jam: ";
-    cin >> daftarUser[jumlahUser].billing.jam;
-
-    cout << "Masa Aktif: ";
-    cin >> daftarUser[jumlahUser].billing.masaAktif;
+    daftarUser[jumlahUser].billing.jam = inputAngka("Billing Jam: ");
+    daftarUser[jumlahUser].billing.masaAktif = inputAngka("Masa Aktif: ");
 
     jumlahUser++;
+    cout << "Member berhasil ditambahkan!\n";
 }
 
 void updateMember() {
     int index;
     tampilkanMember();
 
-    cout << "Pilih member: ";
-    cin >> index;
+    index = inputAngka("Pilih member: ");
 
     if (index > 0 && index <= jumlahUser) {
-        cin.ignore();
-        cout << "Nama baru: ";
-        getline(cin, daftarUser[index-1].nama);
+        string namaLama = daftarUser[index-1].nama;
+        string namaBaru;
 
-        cout << "Password baru: ";
-        cin >> daftarUser[index-1].password;
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        cout << "Nama baru: ";
+        getline(cin, namaBaru);
+        if (!validasiNamaKosong(namaBaru)) {
+    return;
+}
+        if (cekNamaKecuali(namaBaru, namaLama)) {
+            cout << "Nama sudah digunakan!\n";
+            return;
+        }
+
+        daftarUser[index-1].nama = namaBaru;
+
+        daftarUser[index-1].password = validasiPassword();
+
+        cout << "Member berhasil diupdate!\n";
     }
 }
 
@@ -263,15 +340,11 @@ void updateBilling() {
     int index;
     tampilkanMember();
 
-    cout << "Pilih member: ";
-    cin >> index;
+    index = inputAngka("Pilih member: ");
 
     if (index > 0 && index <= jumlahUser) {
-        cout << "Jam baru: ";
-        cin >> daftarUser[index-1].billing.jam;
-
-        cout << "Masa aktif baru: ";
-        cin >> daftarUser[index-1].billing.masaAktif;
+        daftarUser[index-1].billing.jam = inputAngka("Jam baru: ");
+        daftarUser[index-1].billing.masaAktif = inputAngka("Masa aktif baru: ");
     }
 }
 
@@ -279,8 +352,7 @@ void hapusMember() {
     int index;
     tampilkanMember();
 
-    cout << "Pilih member: ";
-    cin >> index;
+    index = inputAngka("Pilih member: ");
 
     if (index > 0 && index <= jumlahUser) {
         for (int i = index-1; i < jumlahUser-1; i++) {
@@ -293,23 +365,17 @@ void hapusMember() {
 
 void sortNama() {
     sort(daftarUser, daftarUser + jumlahUser,
-        [](User a, User b) {
-            return a.nama < b.nama;
-        });
+        [](User a, User b) { return a.nama < b.nama; });
 }
 
 void sortBilling() {
     sort(daftarUser, daftarUser + jumlahUser,
-        [](User a, User b) {
-            return a.billing.jam < b.billing.jam;
-        });
+        [](User a, User b) { return a.billing.jam < b.billing.jam; });
 }
 
 void sortMasaAktif() {
     sort(daftarUser, daftarUser + jumlahUser,
-        [](User a, User b) {
-            return a.billing.masaAktif < b.billing.masaAktif;
-        });
+        [](User a, User b) { return a.billing.masaAktif < b.billing.masaAktif; });
 }
 
 void menuSorting() {
@@ -326,23 +392,9 @@ void menuSorting() {
         pilih = menuArrow("MENU SORTING", sortingMenu, 4);
 
         switch (pilih) {
-            case 1:
-                sortNama();
-                tampilkanMember();
-                pauseScreen();
-                break;
-
-            case 2:
-                sortBilling();
-                tampilkanMember();
-                pauseScreen();
-                break;
-
-            case 3:
-                sortMasaAktif();
-                tampilkanMember();
-                pauseScreen();
-                break;
+            case 1: sortNama(); tampilkanMember(); pauseScreen(); break;
+            case 2: sortBilling(); tampilkanMember(); pauseScreen(); break;
+            case 3: sortMasaAktif(); tampilkanMember(); pauseScreen(); break;
         }
 
     } while (pilih != 4);
@@ -353,27 +405,29 @@ void cariNama() {
     bool ditemukan = false;
 
     clearScreen();
-    cin.ignore();
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
 
     cout << "===== SEARCH MEMBER =====\n";
     cout << "Masukkan nama yang dicari: ";
     getline(cin, target);
 
     for (int i = 0; i < jumlahUser; i++) {
-        if (daftarUser[i].nama == target) {
+    if (daftarUser[i].nama == target) {
+        clearScreen();
+        cout << "===== DATA DITEMUKAN =====\n\n";
+        cout << "Nama       : " << daftarUser[i].nama << endl;
+        cout << "Password   : " << daftarUser[i].password << endl;
+        cout << "Billing    : ";
+        tampilAngka(daftarUser[i].billing.jam);
+        cout << " jam" << endl;
+        cout << "Masa Aktif : ";
+        tampilAngka(daftarUser[i].billing.masaAktif);
+        cout << " hari" << endl;
 
-            clearScreen();
-
-            cout << "===== DATA DITEMUKAN =====\n\n";
-            cout << "Nama       : " << daftarUser[i].nama << endl;
-            cout << "Password   : " << daftarUser[i].password << endl;
-            cout << "Billing    : " << daftarUser[i].billing.jam << " jam" << endl;
-            cout << "Masa Aktif : " << daftarUser[i].billing.masaAktif << " hari" << endl;
-
-            ditemukan = true;
-            break;
-        }
+        ditemukan = true;
+        break;
     }
+}
 
     if (!ditemukan) {
         clearScreen();
@@ -392,7 +446,6 @@ void tampilkanPaket() {
     }
 
     cout << "================ DAFTAR PAKET =================\n";
-
     cout << left
         << setw(5)  << "No"
         << setw(20) << "Nama Paket"
@@ -403,14 +456,14 @@ void tampilkanPaket() {
 
     cout << "------------------------------------------------------------\n";
 
-    for (int i = 0; i < jumlahPaket; i++) {
-        cout << setw(5)  << i + 1
-            << setw(20) << daftarPaket[i].namaPaket
-            << setw(10) << daftarPaket[i].jam
-            << setw(15) << daftarPaket[i].masaAktif
-            << setw(15) << daftarPaket[i].harga
-            << endl;
-    }
+   for (int i = 0; i < jumlahPaket; i++) {
+    cout << setw(5)  << i + 1
+         << setw(20) << daftarPaket[i].namaPaket
+         << setw(10) << daftarPaket[i].jam
+         << setw(15) << daftarPaket[i].masaAktif
+         << "Rp" << daftarPaket[i].harga
+         << endl;
+}
 }
 
 void updateProfilUser(User* userAktif) {
@@ -418,29 +471,40 @@ void updateProfilUser(User* userAktif) {
 
     do {
         string updateMenu[] = {
-            "1. Update Nama",
-            "2. Update Password",
-            "3. Kembali"
+            "Update Nama",
+            "Update Password",
+            "Kembali"
         };
 
         pilih = menuArrow("UPDATE PROFIL", updateMenu, 3);
 
         switch (pilih) {
-            case 1:
+            case 1: {
                 clearScreen();
-                cin.ignore();
-                cout << "Masukkan nama baru: ";
-                getline(cin, userAktif->nama);
+                string namaLama = userAktif->nama;
+                string namaBaru;
 
-                cout << "Nama berhasil diupdate!\n";
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                cout << "Masukkan nama baru: ";
+                getline(cin, namaBaru);
+                 if (!validasiNamaKosong(namaBaru)) {
+                    return;
+
+            }   
+                if (cekNamaKecuali(namaBaru, namaLama)) {
+                    cout << "Nama sudah digunakan!\n";
+                } else {
+                    userAktif->nama = namaBaru;
+                    cout << "Nama berhasil diupdate!\n";
+                }
+
                 pauseScreen();
                 break;
+            }
 
             case 2:
                 clearScreen();
-                cout << "Masukkan password baru: ";
-                userAktif->password = inputPassword();
-
+               userAktif->password = validasiPassword();
                 cout << "Password berhasil diupdate!\n";
                 pauseScreen();
                 break;
@@ -459,9 +523,7 @@ void pilihPaket(User* userAktif) {
     clearScreen();
     tampilkanPaket();
 
-    int pilih;
-    cout << "\nPilih paket: ";
-    cin >> pilih;
+    int pilih = inputAngka("\nPilih paket: ");
 
     if (pilih > 0 && pilih <= jumlahPaket) {
         Paket p = daftarPaket[pilih-1];
@@ -476,10 +538,9 @@ void pilihPaket(User* userAktif) {
         };
 
         jumlahPesanan++;
-
         cout << "Pesanan billing berhasil dibuat\n";
         cout << "Menunggu verifikasi admin.\n";
-    } 
+    }
     else {
         cout << "Pilihan paket tidak valid!\n";
     }
@@ -509,27 +570,20 @@ void lihatPesanan() {
                 << setw(20) << daftarPesanan[i].namaPaket
                 << setw(15) << daftarPesanan[i].status
                 << endl;
-
             adaPending = true;
         }
     }
 
-    if (!adaPending) {
-        cout << "Tidak ada pesanan pending.\n";
-    }
+    if (!adaPending) cout << "Tidak ada pesanan pending.\n";
 }
 
 void verifikasiBilling() {
     cout << "\n===== VERIFIKASI BILLING =====\n";
-
     lihatPesanan();
 
-    int pilih;
-    cout << "Pilih pesanan: ";
-    cin >> pilih;
+    int pilih = inputAngka("Pilih pesanan: ");
 
     if (pilih > 0 && pilih <= jumlahPesanan) {
-
         if (daftarPesanan[pilih-1].status == "Verified") {
             cout << "Pesanan sudah diverifikasi!\n";
             return;
@@ -545,7 +599,7 @@ void verifikasiBilling() {
         }
 
         cout << "Pesanan billing berhasil diverifikasi!\n";
-    } 
+    }
     else {
         cout << "Pilihan tidak valid!\n";
     }
@@ -564,7 +618,6 @@ void verifikasiMenu() {
                 << " | " << daftarPesananMenu[i].makanan
                 << " | " << daftarPesananMenu[i].minuman
                 << endl;
-
             adaPending = true;
         }
     }
@@ -575,12 +628,9 @@ void verifikasiMenu() {
         return;
     }
 
-    int pilih;
-    cout << "\nPilih pesanan: ";
-    cin >> pilih;
+    int pilih = inputAngka("\nPilih pesanan: ");
 
     if (pilih > 0 && pilih <= jumlahPesananMenu) {
-
         if (daftarPesananMenu[pilih - 1].status == "Verified") {
             cout << "Pesanan sudah diverifikasi!\n";
             pauseScreen();
@@ -588,7 +638,6 @@ void verifikasiMenu() {
         }
 
         daftarPesananMenu[pilih - 1].status = "Verified";
-
         clearScreen();
         cout << "Pesanan makanan berhasil diverifikasi!\n";
     }
@@ -604,28 +653,28 @@ void lihatRiwayatPesanan() {
 
     bool adaBilling = false;
 
-    for(int i = 0; i < jumlahPesanan; i++) {
-        if(daftarPesanan[i].status == "Verified") {
+    for (int i = 0; i < jumlahPesanan; i++) {
+        if (daftarPesanan[i].status == "Verified") {
             cout << "User       : " << daftarPesanan[i].namaUser << endl;
             cout << "Paket      : " << daftarPesanan[i].namaPaket << endl;
-            cout << "Jam        : " << daftarPesanan[i].jam << endl;
-            cout << "Masa Aktif : " << daftarPesanan[i].masaAktif << " hari" << endl;
+            cout << "Jam        : ";
+            tampilAngka(daftarPesanan[i].jam); cout << endl;
+            cout << "Masa Aktif : ";
+            tampilAngka(daftarPesanan[i].masaAktif); cout << " hari" << endl;
             cout << "Harga      : Rp" << daftarPesanan[i].harga << endl;
             cout << "--------------------------\n";
             adaBilling = true;
         }
     }
 
-    if (!adaBilling) {
-        cout << "Belum ada riwayat billing.\n";
-    }
+    if (!adaBilling) cout << "Belum ada riwayat billing.\n";
 
     cout << "\n===== RIWAYAT MAKANAN =====\n";
 
     bool adaMakanan = false;
 
-    for(int i = 0; i < jumlahPesananMenu; i++) {
-        if(daftarPesananMenu[i].status == "Verified") {
+    for (int i = 0; i < jumlahPesananMenu; i++) {
+        if (daftarPesananMenu[i].status == "Verified") {
             cout << "User     : " << daftarPesananMenu[i].namaUser << endl;
             cout << "Makanan  : " << daftarPesananMenu[i].makanan << endl;
             cout << "Minuman  : " << daftarPesananMenu[i].minuman << endl;
@@ -635,9 +684,7 @@ void lihatRiwayatPesanan() {
         }
     }
 
-    if (!adaMakanan) {
-        cout << "Belum ada riwayat makanan.\n";
-    }
+    if (!adaMakanan) cout << "Belum ada riwayat makanan.\n";
 }
 
 void menuPesanan() {
@@ -653,23 +700,13 @@ void menuPesanan() {
 
         pilih = menuArrow("KELOLA PESANAN", pesananMenu, 4);
 
-        switch(pilih) {
-            case 1:
-                verifikasiBilling();
-                pauseScreen();
-                break;
-
-            case 2:
-                verifikasiMenu();
-                break;
-
-            case 3:
-                lihatRiwayatPesanan();
-                pauseScreen();
-                break;
+        switch (pilih) {
+            case 1: verifikasiBilling(); pauseScreen(); break;
+            case 2: verifikasiMenu(); break;
+            case 3: lihatRiwayatPesanan(); pauseScreen(); break;
         }
 
-    } while(pilih != 4);
+    } while (pilih != 4);
 }
 
 void tambahPaket() {
@@ -678,24 +715,16 @@ void tambahPaket() {
         return;
     }
 
-    cin.ignore();
-
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
     cout << "\n===== TAMBAH PAKET =====\n";
-
     cout << "Nama Paket: ";
     getline(cin, daftarPaket[jumlahPaket].namaPaket);
 
-    cout << "Jumlah Jam: ";
-    cin >> daftarPaket[jumlahPaket].jam;
-
-    cout << "Masa Aktif (hari): ";
-    cin >> daftarPaket[jumlahPaket].masaAktif;
-
-    cout << "Harga: ";
-    cin >> daftarPaket[jumlahPaket].harga;
+    daftarPaket[jumlahPaket].jam = inputAngka("Jumlah Jam: ");
+    daftarPaket[jumlahPaket].masaAktif = inputAngka("Masa Aktif (hari): ");
+    daftarPaket[jumlahPaket].harga = inputAngka("Harga: ");
 
     jumlahPaket++;
-
     cout << "Paket berhasil ditambahkan!\n";
 }
 
@@ -705,30 +734,20 @@ void updatePaket() {
         return;
     }
 
-    int index;
-
     tampilkanPaket();
-
-    cout << "Pilih nomor paket yang ingin diupdate: ";
-    cin >> index;
+    int index = inputAngka("Pilih nomor paket yang ingin diupdate: ");
 
     if (index > 0 && index <= jumlahPaket) {
-        cin.ignore();
-
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
         cout << "Nama Paket Baru: ";
         getline(cin, daftarPaket[index - 1].namaPaket);
 
-        cout << "Jumlah Jam Baru: ";
-        cin >> daftarPaket[index - 1].jam;
-
-        cout << "Masa Aktif Baru: ";
-        cin >> daftarPaket[index - 1].masaAktif;
-
-        cout << "Harga Baru: ";
-        cin >> daftarPaket[index - 1].harga;
+        daftarPaket[index - 1].jam = inputAngka("Jumlah Jam Baru: ");
+        daftarPaket[index - 1].masaAktif = inputAngka("Masa Aktif Baru: ");
+        daftarPaket[index - 1].harga = inputAngka("Harga Baru: ");
 
         cout << "Paket berhasil diupdate!\n";
-    } 
+    }
     else {
         cout << "Nomor paket tidak valid!\n";
     }
@@ -740,22 +759,16 @@ void hapusPaket() {
         return;
     }
 
-    int index;
-
     tampilkanPaket();
-
-    cout << "Pilih nomor paket yang ingin dihapus: ";
-    cin >> index;
+    int index = inputAngka("Pilih nomor paket yang ingin dihapus: ");
 
     if (index > 0 && index <= jumlahPaket) {
         for (int i = index - 1; i < jumlahPaket - 1; i++) {
             daftarPaket[i] = daftarPaket[i + 1];
         }
-
         jumlahPaket--;
-
         cout << "Paket berhasil dihapus!\n";
-    } 
+    }
     else {
         cout << "Nomor paket tidak valid!\n";
     }
@@ -776,25 +789,10 @@ void menuPaketAdmin() {
         pilih = menuArrow("KELOLA PAKET", paketMenu, 5);
 
         switch (pilih) {
-            case 1:
-                tampilkanPaket();
-                pauseScreen();
-                break;
-
-            case 2:
-                tambahPaket();
-                pauseScreen();
-                break;
-
-            case 3:
-                updatePaket();
-                pauseScreen();
-                break;
-
-            case 4:
-                hapusPaket();
-                pauseScreen();
-                break;
+            case 1: tampilkanPaket(); pauseScreen(); break;
+            case 2: tambahPaket(); pauseScreen(); break;
+            case 3: updatePaket(); pauseScreen(); break;
+            case 4: hapusPaket(); pauseScreen(); break;
         }
 
     } while (pilih != 5);
@@ -817,33 +815,23 @@ void pesanMenu(User* userAktif) {
     cout << "3. Indomie          Rp10000\n";
     cout << "4. Tidak pesan makanan\n";
     cout << "5. Kembali\n";
-    cout << "Pilih makanan: ";
-    cin >> pilihMakanan;
 
+    pilihMakanan = inputAngka("Pilih makanan: ");
+    
+    
     switch (pilihMakanan) {
-        case 1:
-            userAktif->pesanan.makanan = "Nasi Goreng";
-            userAktif->pesanan.total += 15000;
-            break;
-        case 2:
-            userAktif->pesanan.makanan = "Mie Ayam";
-            userAktif->pesanan.total += 12000;
-            break;
-        case 3:
-            userAktif->pesanan.makanan = "Indomie";
-            userAktif->pesanan.total += 10000;
-            break;
-        case 4:
-            userAktif->pesanan.makanan = "Tidak pesan makanan";
-            break;
-        case 5:
-            return;
+        case 1: userAktif->pesanan.makanan = "Nasi Goreng"; userAktif->pesanan.total += 15000; break;
+        case 2: userAktif->pesanan.makanan = "Mie Ayam";    userAktif->pesanan.total += 12000; break;
+        case 3: userAktif->pesanan.makanan = "Indomie";     userAktif->pesanan.total += 10000; break;
+        case 4: userAktif->pesanan.makanan = "Tidak pesan makanan"; break;
+        case 5: return;
         default:
             cout << "Pilihan makanan tidak valid!\n";
             pauseScreen();
             return;
     }
-
+    cout << "Makanan Berhasil Ditambahkan!" << endl;
+    pauseScreen();
     clearScreen();
     cout << "===== MENU MINUMAN =====\n";
     cout << "1. Es Teh           Rp5000\n";
@@ -851,27 +839,15 @@ void pesanMenu(User* userAktif) {
     cout << "3. Air Mineral      Rp3000\n";
     cout << "4. Tidak pesan minuman\n";
     cout << "5. Kembali\n";
-    cout << "Pilih minuman: ";
-    cin >> pilihMinuman;
+
+    pilihMinuman = inputAngka("Pilih minuman: ");
 
     switch (pilihMinuman) {
-        case 1:
-            userAktif->pesanan.minuman = "Es Teh";
-            userAktif->pesanan.total += 5000;
-            break;
-        case 2:
-            userAktif->pesanan.minuman = "Es Jeruk";
-            userAktif->pesanan.total += 8000;
-            break;
-        case 3:
-            userAktif->pesanan.minuman = "Air Mineral";
-            userAktif->pesanan.total += 3000;
-            break;
-        case 4:
-            userAktif->pesanan.minuman = "Tidak pesan minuman";
-            break;
-        case 5:
-            return;
+        case 1: userAktif->pesanan.minuman = "Es Teh";      userAktif->pesanan.total += 5000; break;
+        case 2: userAktif->pesanan.minuman = "Es Jeruk";    userAktif->pesanan.total += 8000; break;
+        case 3: userAktif->pesanan.minuman = "Air Mineral"; userAktif->pesanan.total += 3000; break;
+        case 4: userAktif->pesanan.minuman = "Tidak pesan minuman"; break;
+        case 5: return;
         default:
             cout << "Pilihan minuman tidak valid!\n";
             pauseScreen();
@@ -887,7 +863,7 @@ void pesanMenu(User* userAktif) {
     };
 
     jumlahPesananMenu++;
-
+    cout << "Minuman Berhasil Ditambah.\n";
     cout << "Pesanan berhasil dibuat.\n";
     cout << "Menunggu verifikasi admin.\n";
 
@@ -918,20 +894,19 @@ void lihatSemuaPesananUser(User* userAktif) {
                 << setw(15) << daftarPesananMenu[i].total
                 << setw(15) << daftarPesananMenu[i].status
                 << endl;
-
             ditemukan = true;
         }
     }
 
-    if (!ditemukan) {
-        cout << "Belum ada pesanan.\n";
-    }
+    if (!ditemukan) cout << "Belum ada pesanan.\n";
 
     pauseScreen();
 }
 
 void menuAdmin() {
     int pilih;
+    cout << "Login Berhasil!" << endl;
+    pauseScreen();
 
     do {
         string adminMenu[] = {
@@ -949,7 +924,7 @@ void menuAdmin() {
 
         pilih = menuArrow("MENU ADMIN", adminMenu, 10);
 
-        switch(pilih) {
+        switch (pilih) {
             case 1: tambahMember(); pauseScreen(); break;
             case 2: tampilkanMember(); pauseScreen(); break;
             case 3: updateMember(); pauseScreen(); break;
@@ -959,21 +934,18 @@ void menuAdmin() {
             case 7: cariNama(); break;
             case 8: menuPesanan(); break;
             case 9: menuPaketAdmin(); break;
-            case 10:
-                cout << "Logout berhasil.\n";
-                break;
-            default:
-                cout << "Pilihan tidak valid!\n";
+            case 10: cout << "Logout berhasil.\n"; break;
+            default: cout << "Pilihan tidak valid!\n";
         }
 
-    } while(pilih != 10);
+    } while (pilih != 10);
 }
-
 
 void menuUser(int userIndex) {
     User* userAktif = &daftarUser[userIndex];
     int pilih;
-
+    cout << "Login Berhasil!" << endl;
+    pauseScreen();
     do {
         string userMenu[] = {
             "1. Lihat Profil",
@@ -986,52 +958,43 @@ void menuUser(int userIndex) {
 
         pilih = menuArrow("MENU USER", userMenu, 6);
 
-        switch(pilih) {
+        switch (pilih) {
             case 1:
                 clearScreen();
                 cout << "========== PROFIL USER ==========\n";
                 cout << "Nama        : " << userAktif->nama << endl;
                 cout << "Password    : " << userAktif->password << endl;
-                cout << "Billing     : " << userAktif->billing.jam << " jam\n";
-                cout << "Masa Aktif  : " << userAktif->billing.masaAktif << " hari\n";
+                cout << "Billing     : ";
+                tampilAngka(userAktif->billing.jam);
+                cout << " jam\n";
+                cout << "Masa Aktif  : ";
+                tampilAngka(userAktif->billing.masaAktif);
+                cout << " hari\n";
                 pauseScreen();
                 break;
-
-            case 2:
-                pilihPaket(userAktif);
-                break;
-
-            case 3:
-                pesanMenu(userAktif);
-                break;
-
-            case 4:
-                lihatSemuaPesananUser(userAktif);
-                break;
-
-            case 5:
-                updateProfilUser(userAktif);
-                pauseScreen();
-                break;
+            case 2: pilihPaket(userAktif); break;
+            case 3: pesanMenu(userAktif); break;
+            case 4: lihatSemuaPesananUser(userAktif); break;
+            case 5: updateProfilUser(userAktif); pauseScreen(); break;
         }
 
-    } while(pilih != 6);
+    } while (pilih != 6);
 }
 
 int main() {
 
-    daftarUser[0] = {"Aditya", "123", {10,30}, {"","",0}};
-    daftarUser[1] = {"Budi", "456", {5,15}, {"","",0}};
-    daftarUser[2] = {"Citra", "789", {8,20}, {"","",0}};
+    daftarUser[0] = {"Aditya", "aditya1234", {10, 30}, {"", "", 0}};
+    daftarUser[1] = {"Budi",   "budi1234", {5,  15}, {"", "", 0}};
+    daftarUser[2] = {"Citra",  "citra1234", {8,  20}, {"", "", 0}};
     jumlahUser = 3;
 
-    daftarPaket[0] = {"Paket Hemat", 2, 7, 10000};
-    daftarPaket[1] = {"Paket Reguler", 5, 14, 25000};
-    daftarPaket[2] = {"Paket Sultan", 10, 30, 50000};
+    daftarPaket[0] = {"Paket Hemat",   2,  7,  10000};
+    daftarPaket[1] = {"Paket Reguler", 5,  14, 25000};
+    daftarPaket[2] = {"Paket Sultan",  10, 30, 50000};
     jumlahPaket = 3;
 
     daftarPesanan[0] = {"Aditya", "Paket Reguler", 5, 14, 25000, "Pending"};
-    daftarPesanan[1] = {"Budi", "Paket Hemat", 2, 7, 10000, "Pending"};
+    daftarPesanan[1] = {"Budi",   "Paket Hemat",   2, 7,  10000, "Pending"};
     jumlahPesanan = 2;
 
     int menu;
@@ -1045,27 +1008,54 @@ int main() {
 
         menu = menuArrow("MENU AWAL", menuAwal, 3);
 
-        switch(menu) {
+        switch (menu) {
             case 1:
                 registerUser();
+                pauseScreen();
                 break;
 
             case 2: {
-                bool admin = false;
-                int userIndex = -1;
+    bool admin = false;
+    int userIndex = -1;
 
-                if (login(admin, userIndex)) {
-                    if (admin)
-                        menuAdmin();
-                    else
-                        menuUser(userIndex);
-                }
-                break;
-            }
+    int percobaan = 0;
+    bool berhasilLogin = false;
+
+    while (percobaan < 3 && !berhasilLogin) {
+
+        if (login(admin, userIndex)) {
+            berhasilLogin = true;
+
+            if (admin)
+                menuAdmin();
+            else
+                menuUser(userIndex);
         }
 
-    } while(menu != 3);
+        else {
+            percobaan++;
+            cout << "\nLogin gagal!\n"; 
+            if (percobaan < 3) {
+                cout << "\nSisa percobaan: "
+                     << 3 - percobaan << endl;
 
-    cout << "Terima kasih!\n";
+                pauseScreen();
+            }
+        }
+    }
+
+    if (!berhasilLogin) {
+        cout << "\nLogin gagal 3x! Kembali ke menu awal.\n";
+        pauseScreen();
+    }
+
+    break;
+}
+        }
+
+
+    } while (menu != 3);
+
+    cout << "Terima kasih Sudah Menggunakan Program!\n";
     return 0;
 }
