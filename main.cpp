@@ -206,8 +206,8 @@ void registerUser() {
 
     cin.ignore(numeric_limits<streamsize>::max(), '\n');
     cout << "Nama: ";
-getline(cin, daftarUser[jumlahUser].nama);
-if (!validasiNamaKosong(daftarUser[jumlahUser].nama)) {
+    getline(cin, daftarUser[jumlahUser].nama);
+    if (!validasiNamaKosong(daftarUser[jumlahUser].nama)) {
     return;
 }
 
@@ -236,7 +236,7 @@ bool login(bool &admin, int &userIndex) {
 
     cout << "Password: ";
     passwordInput = inputPassword();
-
+    
     if (namaInput == "Admin" && passwordInput == "Admin076") {
         admin = true;
         return true;
@@ -271,8 +271,8 @@ void tampilkanMember() {
     for (int i = 0; i < jumlahUser; i++) {
 
     cout << setw(5)  << i + 1
-         << setw(20) << daftarUser[i].nama
-         << setw(15) << daftarUser[i].password;
+        << setw(20) << daftarUser[i].nama
+        << setw(15) << daftarUser[i].password;
 
     tampilAngka(daftarUser[i].billing.jam);
     cout << " jam\t\t";
@@ -1033,11 +1033,12 @@ int main() {
         }
 
         else {
+            clearScreen();
             percobaan++;
             cout << "\nLogin gagal!\n"; 
             if (percobaan < 3) {
                 cout << "\nSisa percobaan: "
-                     << 3 - percobaan << endl;
+                    << 3 - percobaan << endl;
 
                 pauseScreen();
             }
